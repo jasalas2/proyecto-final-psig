@@ -1,0 +1,7 @@
+# Tema de la aplicación (autor: Jarod Salas): verde de la piel y rojo de los ojos de la rana
+[theme]
+base = "light"
+primaryColor = "#d7301f"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#eef6ea"
+textColor = "#1c2b1c"

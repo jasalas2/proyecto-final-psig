@@ -18,10 +18,16 @@ La barra lateral tiene tres controles (provincia, rango de años y época del a�
 de la página:
 
 - **Indicadores:** número de observaciones, cantones con observaciones, número de observadores y promedio anual.
-- **Tablas:** resumen por cantón (observaciones, área, densidad y porcentaje) y registros individuales, descargables en CSV.
-- **Gráficos (plotly):** observaciones por año, por mes (estacionalidad) y cantones con más observaciones.
+- **¿Sabía que…?:** cuatro datos curiosos calculados para la selección (proporción de observaciones nocturnas,
+  año récord, concentración en pocos cantones y proporción de observadores ocasionales).
 - **Mapa web (folium y streamlit-folium):** coropletas del número de observaciones por cantón, límites de provincias
-  y puntos de observación, con control de capas, etiquetas emergentes y leyenda.
+  y puntos de observación con su foto, con control de capas, etiquetas emergentes y leyenda.
+- **Gráficos (plotly):** observaciones por año, por hora del día (gráfico polar), por mes (estacionalidad),
+  reparto por provincia y cantón (sunburst) y cantones con más observaciones.
+- **Galería:** fotos recientes de la selección con licencia Creative Commons, con su crédito y enlace al registro.
+- **Tablas:** resumen por cantón y registros individuales con foto, descargables en CSV.
+
+La aplicación también incluye una ficha breve de la especie y un tema de colores propio (`.streamlit/config.toml`).
 
 Ejecución local, en el ambiente conda del curso:
 
@@ -34,6 +40,9 @@ streamlit run app.py
 - iNaturalist. (2026). *Observaciones de* Agalychnis callidryas *en Costa Rica* [Conjunto de datos].
   https://www.inaturalist.org/observations?place_id=6924&taxon_id=23702. Se carga desde el repositorio de la tarea 2:
   https://github.com/jasalas2/tarea2_psig
+- Animal Diversity Web y The Embryo Project (ASU), para la ficha de la especie:
+  https://animaldiversity.org/accounts/Agalychnis_callidryas/ y
+  https://embryo.asu.edu/pages/how-do-embryos-assess-risk-vibrational-cues-predator-induced-hatching-red-eyed-treefrogs-2005
 - Instituto Geográfico Nacional. (2026). *Límites cantonales y provinciales de Costa Rica* [Conjunto de datos,
   distribuido en el repositorio del curso]. https://github.com/gf0657-programacionsig/2026-ii/tree/main/datos/ign
 
@@ -46,7 +55,7 @@ Se usó **Claude (Anthropic)** como asistente de programación:
   (`streamlit run` y `AppTest`, incluida una selección sin datos).
 - **Partes:** estructura general de `app.py`, adaptación de las funciones de carga y de unión espacial a funciones con
   `@st.cache_data`, construcción del mapa en una función con `@st.cache_resource`, configuración de las tablas
-  (`column_config`) y de los gráficos de plotly, y redacción de este README.
+  (`column_config`) y de los gráficos de plotly, cálculo de los datos curiosos, galería de fotos, tema de colores, y redacción de este README.
 
 Todo el código fue revisado y comprendido por el autor, quien verificó los resultados (conteos por cantón y por año)
 contra los obtenidos en las tareas 2 y 3.
