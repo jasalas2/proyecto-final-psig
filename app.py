@@ -443,19 +443,34 @@ else:
 
         col_provincia, col_canton = st.columns(2)
         with col_provincia:
-            por_provincia = (tabla_cantones.groupby("provincia", as_index=False)["observaciones"].sum()
-                             .sort_values("observaciones"))
-            por_provincia["etiqueta"] = [f"{formato_numero(n)} ({n / len(seleccion):.0%})"
-                                         for n in por_provincia["observaciones"]]
-            grafico_provincia = px.bar(
-                por_provincia, x="observaciones", y="provincia", orientation="h", text="etiqueta",
-                title=f"Observaciones por provincia ({texto_provincia})",
-                labels={"observaciones": "Observaciones (registros)", "provincia": "Provincia"},
-                color_discrete_sequence=[VERDE],
-            )
-            grafico_provincia.update_traces(textposition="outside", cliponaxis=False,
-                                            hovertemplate="%{y}: %{x} registros<extra></extra>")
-            grafico_provincia.update_layout(xaxis_range=[0, por_provincia["observaciones"].max() * 1.25])
+            if provincia == "Todas":
+                # Con todo el país: comparación entre provincias
+                por_provincia = (tabla_cantones.groupby("provincia", as_index=False)["observaciones"].sum()
+                                 .sort_values("observaciones"))
+                por_provincia["etiqueta"] = [f"{formato_numero(n)} ({n / len(seleccion):.0%})"
+                                             for n in por_provincia["observaciones"]]
+                grafico_provincia = px.bar(
+                    por_provincia, x="observaciones", y="provincia", orientation="h", text="etiqueta",
+                    title="Observaciones por provincia (todas las provincias)",
+                    labels={"observaciones": "Observaciones (registros)", "provincia": "Provincia"},
+                    color_discrete_sequence=[VERDE],
+                )
+                grafico_provincia.update_traces(textposition="outside", cliponaxis=False,
+                                                hovertemplate="%{y}: %{x} registros<extra></extra>")
+                grafico_provincia.update_layout(xaxis_range=[0, por_provincia["observaciones"].max() * 1.25])
+            else:
+                # Con una provincia: densidad por cantón, que compara cantones de tamaños muy distintos
+                densidad = tabla_cantones.sort_values("densidad").tail(15)
+                grafico_provincia = px.bar(
+                    densidad, x="densidad", y="canton", orientation="h", text="densidad",
+                    title=f"Densidad de observaciones por cantón ({texto_provincia})",
+                    labels={"densidad": "Densidad (obs/100 km²)", "canton": "Cantón",
+                            "observaciones": "Observaciones (registros)", "area_km2": "Área (km²)"},
+                    hover_data={"observaciones": True, "area_km2": ":.0f", "densidad": ":.1f"},
+                    color_discrete_sequence=[ROJO],
+                )
+                grafico_provincia.update_traces(texttemplate="%{text:.1f}", textposition="outside", cliponaxis=False)
+                grafico_provincia.update_layout(xaxis_range=[0, densidad["densidad"].max() * 1.2])
             st.plotly_chart(grafico_provincia, width="stretch")
 
         with col_canton:
