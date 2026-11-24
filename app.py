@@ -62,20 +62,31 @@ def color_clase(n):
 
 
 def leyenda_html():
-    """Leyenda del mapa de coropletas como control de Leaflet: una fila por clase, con título y unidades."""
+    """Leyenda del mapa como control de Leaflet: símbolos de cada capa y clases de las coropletas."""
     cuadro = ('display:inline-block;width:14px;height:14px;margin-right:6px;'
               'vertical-align:middle;border:1px solid #999;background:')
+    simbolos = (
+        f'<div><span style="display:inline-block;width:10px;height:10px;margin:0 8px 0 2px;border-radius:50%;'
+        f'vertical-align:middle;background:{ROJO};border:1px solid #7f0000;"></span>Observación (iNaturalist)</div>'
+        '<div><span style="display:inline-block;width:40px;height:10px;margin-right:6px;vertical-align:middle;'
+        'background:linear-gradient(to right,#fee08b,#fdae61,#f46d43,#a50026);"></span>Puntos de calor '
+        '(concentración de observaciones, de baja a alta)</div>'
+        '<div><span style="display:inline-block;width:18px;height:0;margin-right:6px;vertical-align:middle;'
+        'border-top:2px solid #444;"></span>Límite de provincia</div>'
+    )
     filas = "".join(
         f'<div><span style="{cuadro}{color};"></span>{etiqueta}</div>'
         for color, etiqueta in zip(COLORES + [COLOR_SIN_DATOS], ETIQUETAS_CLASES + ["Sin observaciones"])
     )
-    contenido = ("<b>Observaciones por cantón</b><br><i>(número de registros)</i>" + filas).replace("'", "&#39;")
+    contenido = ("<b>Capas del mapa</b>" + simbolos
+                 + "<div style='margin-top:6px'><b>Observaciones por cantón</b><br><i>(número de registros)</i></div>"
+                 + filas).replace("'", "&#39;")
     plantilla = """
     {% macro script(this, kwargs) %}
     var leyenda = L.control({position: "bottomright"});
     leyenda.onAdd = function () {
         var div = L.DomUtil.create("div");
-        div.style.cssText = "background:white;padding:8px 10px;border-radius:4px;"
+        div.style.cssText = "background:white;padding:8px 10px;border-radius:4px;max-width:230px;"
             + "box-shadow:0 0 4px rgba(0,0,0,0.3);font:12px sans-serif;color:#333;line-height:18px;";
         div.innerHTML = 'CONTENIDO';
         return div;
