@@ -9,7 +9,7 @@ import geopandas as gpd
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from branca.colormap import StepColormap
+from branca.element import MacroElement, Template
 from streamlit_folium import st_folium
 
 # ---------- Configuración de la página (primera llamada a streamlit) ----------
@@ -37,6 +37,40 @@ EPOCAS = {
 CORTES = [1, 11, 51, 201, 501]
 COLORES = ["#ffffcc", "#c2e699", "#78c679", "#31a354", "#006837"]
 COLOR_SIN_DATOS = "#e0e0e0"
+ETIQUETAS_CLASES = ["1-10", "11-50", "51-200", "201-500", "Más de 500"]
+
+
+def color_clase(n):
+    """Color de la clase a la que pertenece un número de observaciones."""
+    if n <= 0:
+        return COLOR_SIN_DATOS
+    return COLORES[sum(n >= corte for corte in CORTES) - 1]
+
+
+def leyenda_html():
+    """Leyenda del mapa de coropletas: una fila por clase, con título y unidades."""
+    filas = "".join(
+        f'<div><span style="background:{color};"></span>{etiqueta}</div>'
+        for color, etiqueta in zip(COLORES + [COLOR_SIN_DATOS], ETIQUETAS_CLASES + ["Sin observaciones"])
+    )
+    plantilla = """
+    {% macro html(this, kwargs) %}
+    <div class="leyenda-mapa">
+      <b>Observaciones por cantón</b><br><i>(número de registros)</i>
+      FILAS
+    </div>
+    <style>
+      .leyenda-mapa {position: absolute; bottom: 30px; left: 10px; z-index: 9999; background: white;
+                     padding: 8px 10px; border-radius: 4px; box-shadow: 0 0 4px rgba(0,0,0,0.3);
+                     font: 12px sans-serif; color: #333; line-height: 18px;}
+      .leyenda-mapa span {display: inline-block; width: 14px; height: 14px; margin-right: 6px;
+                          vertical-align: middle; border: 1px solid #999;}
+    </style>
+    {% endmacro %}
+    """.replace("FILAS", filas)
+    leyenda = MacroElement()
+    leyenda._template = Template(plantilla)
+    return leyenda
 
 
 # ---------- Datos, en caché ----------
@@ -124,7 +158,13 @@ def crear_mapa(provincia, anios, epoca):
     capa = resumir_cantones(seleccion, provincia)
     provincias = cargar_provincias()
 
-    mapa = folium.Map(location=[9.8, -84.1], zoom_start=8, tiles=None, control_scale=True)
+    # Vista inicial: centro y zoom fijos (fit_bounds falla cuando el mapa se crea dentro de una pestaña oculta)
+    if provincia == "Todas":
+        centro, zoom = [9.65, -84.2], 8
+    else:
+        oeste, sur, este, norte = capa.total_bounds
+        centro, zoom = [(sur + norte) / 2, (oeste + este) / 2], 9
+    mapa = folium.Map(location=centro, zoom_start=zoom, tiles=None, control_scale=True)
     folium.TileLayer("OpenStreetMap", name="OpenStreetMap").add_to(mapa)
     folium.TileLayer(
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -132,12 +172,9 @@ def crear_mapa(provincia, anios, epoca):
     ).add_to(mapa)
 
     # Capa 1: coropletas del número de observaciones por cantón
-    escala = StepColormap(COLORES, index=CORTES, vmin=1, vmax=1000,
-                          caption="Observaciones por cantón (número de registros)")
-
     def estilo(feature):
         n = feature["properties"]["observaciones"]
-        return {"fillColor": escala(n) if n > 0 else COLOR_SIN_DATOS,
+        return {"fillColor": color_clase(n),
                 "color": "white", "weight": 0.6, "fillOpacity": 0.75}
 
     folium.GeoJson(
@@ -151,7 +188,7 @@ def crear_mapa(provincia, anios, epoca):
             localize=True,
         ),
     ).add_to(mapa)
-    escala.add_to(mapa)
+    mapa.get_root().add_child(leyenda_html())
 
     # Capa 2: provincias (referencia)
     folium.GeoJson(
@@ -177,14 +214,7 @@ def crear_mapa(provincia, anios, epoca):
         ),
     ).add_to(mapa)
 
-    folium.LayerControl(collapsed=False).add_to(mapa)
-
-    # Encuadre: la provincia elegida o el territorio continental (sin la isla del Coco)
-    if provincia != "Todas":
-        oeste, sur, este, norte = capa.total_bounds
-        mapa.fit_bounds([[sur, oeste], [norte, este]])
-    else:
-        mapa.fit_bounds([[8.0, -86.0], [11.25, -82.5]])
+    folium.LayerControl(collapsed=True).add_to(mapa)
     return mapa
 
 
@@ -225,10 +255,10 @@ st.markdown(f"**Selección:** {texto_provincia} · {anios[0]}-{anios[1]} · {epo
 n_anios = anios[1] - anios[0] + 1
 cantones_con_obs = int((resumen["observaciones"] > 0).sum())
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Observaciones", f"{formato_numero(len(seleccion))} registros")
+col1.metric("Observaciones (registros)", formato_numero(len(seleccion)))
 col2.metric("Cantones con observaciones", f"{cantones_con_obs} de {len(resumen)}")
-col3.metric("Observadores", f"{formato_numero(seleccion['observador'].nunique())} personas")
-col4.metric("Promedio anual", f"{formato_numero(len(seleccion) / n_anios, 1)} obs/año")
+col3.metric("Observadores (personas)", formato_numero(seleccion["observador"].nunique()))
+col4.metric("Promedio anual (obs/año)", formato_numero(len(seleccion) / n_anios, 1))
 
 if seleccion.empty:
     st.warning("Ninguna observación cumple los filtros seleccionados. Amplíe el rango de años o cambie la provincia "
