@@ -3,6 +3,7 @@
 # Autor: Jarod Salas
 # Ejecución: streamlit run app.py
 import copy
+import html
 
 import folium
 import geopandas as gpd
@@ -10,6 +11,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from branca.element import MacroElement, Template
+from folium.plugins import Fullscreen
 from streamlit_folium import st_folium
 
 # ---------- Configuración de la página (primera llamada a streamlit) ----------
@@ -219,6 +221,21 @@ def datos_curiosos(seleccion, resumen):
 
 
 # ---------- Mapa, en caché por combinación de filtros ----------
+def html_ventana(fila):
+    """Contenido de la ventana emergente de un punto: foto (de alto fijo) y datos del registro."""
+    if pd.notna(fila["foto"]):
+        foto = (f'<img src="{fila["foto"]}" style="width:230px;height:160px;object-fit:cover;'
+                f'border-radius:4px;display:block;margin-bottom:6px">')
+    else:
+        foto = '<div style="margin-bottom:6px"><i>Sin foto</i></div>'
+    datos = [("Fecha", f"{fila['fecha']:%Y-%m-%d}"), ("Cantón", fila["canton"]),
+             ("Lugar", fila["lugar"]), ("Observador", fila["observador"])]
+    filas = "".join(f"<tr><td style='padding-right:6px'><b>{etiqueta}:</b></td><td>{html.escape(str(valor))}</td></tr>"
+                    for etiqueta, valor in datos)
+    enlace = f'<a href="{fila["uri"]}" target="_blank">Ver en iNaturalist</a>'
+    return f'<div style="width:230px;font-size:12px">{foto}<table>{filas}</table>{enlace}</div>'
+
+
 def vista_inicial(provincia):
     """Centro y zoom del mapa: el territorio continental o la provincia elegida."""
     if provincia == "Todas":
@@ -267,30 +284,27 @@ def crear_mapa(provincia, anios, epoca):
         tooltip=folium.GeoJsonTooltip(fields=["provincia"], aliases=["Provincia:"]),
     ).add_to(mapa)
 
-    # Capa 3: puntos, en un panel propio para que queden siempre encima de los polígonos.
-    # La ventana emergente muestra la foto de la observación y un enlace al registro.
-    folium.map.CustomPane("puntos", z_index=650).add_to(mapa)
+    # Capa 3: puntos, en un panel propio (z-index 620) para que queden encima de los polígonos (400)
+    # y debajo de las etiquetas (650) y las ventanas emergentes (700) de Leaflet
+    folium.map.CustomPane("puntos", z_index=620).add_to(mapa)
     marcador = folium.CircleMarker(radius=3, color="#7f0000", weight=0.5,
                                    fill=True, fill_color=ROJO, fill_opacity=0.85)
     marcador.options["pane"] = "puntos"
     puntos = seleccion.assign(
         fecha_texto=seleccion["fecha"].dt.strftime("%Y-%m-%d"),
-        imagen=('<img src="' + seleccion["foto_mini"].fillna("") + '" width="180">').where(
-            seleccion["foto_mini"].notna(), "Sin foto"),
-        enlace='<a href="' + seleccion["uri"] + '" target="_blank">Ver en iNaturalist</a>',
+        ventana=[html_ventana(fila) for _, fila in seleccion.iterrows()],
     )
     folium.GeoJson(
-        puntos[["imagen", "fecha_texto", "lugar", "canton", "observador", "enlace", "geometry"]],
+        puntos[["ventana", "fecha_texto", "canton", "geometry"]],
         name="Observaciones (iNaturalist)",
         marker=marcador,
         tooltip=folium.GeoJsonTooltip(fields=["canton", "fecha_texto"], aliases=["Cantón:", "Fecha:"]),
-        popup=folium.GeoJsonPopup(
-            fields=["imagen", "fecha_texto", "lugar", "canton", "observador", "enlace"],
-            aliases=["", "Fecha:", "Lugar:", "Cantón:", "Observador:", "Registro:"],
-            max_width=260,
-        ),
+        # Ventana de tamaño fijo, para que Leaflet la mantenga dentro del mapa al abrirla
+        popup=folium.GeoJsonPopup(fields=["ventana"], labels=False, max_width=250,
+                                  keepInView=True, autoPanPadding=[20, 20]),
     ).add_to(mapa)
 
+    Fullscreen(position="topleft", title="Pantalla completa", title_cancel="Salir de pantalla completa").add_to(mapa)
     folium.LayerControl(collapsed=True).add_to(mapa)
     return mapa
 
@@ -380,7 +394,7 @@ else:
         mapa = copy.deepcopy(crear_mapa(provincia, anios, epoca))
         # center y zoom se pasan también a st_folium, porque el mapa se crea dentro de una pestaña
         centro, zoom = vista_inicial(provincia)
-        st_folium(mapa, height=620, use_container_width=True, center=centro, zoom=zoom, returned_objects=[])
+        st_folium(mapa, height=780, use_container_width=True, center=centro, zoom=zoom, returned_objects=[])
 
     # ---------- Gráficos ----------
     with pestana_graficos:
