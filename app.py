@@ -356,6 +356,7 @@ st.html("<style>.st-key-carrera button[aria-label='Fullscreen'] {display: none;}
 # ---------- Encabezado ----------
 st.title(f"[Rana de Árbol de Ojos Rojos]({URL_ESPECIE})")
 st.markdown("##### *Agalychnis callidryas* · dónde y cuándo se observa en Costa Rica, según la ciencia ciudadana")
+st.markdown("**Autor:** Jarod Salas Díaz")
 
 col_intro, col_foto, col_ficha = st.columns([5, 4, 4], gap="medium")
 with col_intro:
