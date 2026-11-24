@@ -22,6 +22,10 @@ URL_OBSERVACIONES = (
 )
 URL_IGN = "https://raw.githubusercontent.com/gf0657-programacionsig/2026-ii/main/datos/ign"
 URL_ESPECIE = "https://www.inaturalist.org/taxa/23702"
+# Foto de portada: observación de iNaturalist con licencia CC0 (dominio público)
+FOTO_PORTADA = "https://static.inaturalist.org/photos/173688685/large.jpg"
+CREDITO_PORTADA = ("Foto: Mason Maron (kiwikiu), Alajuela, diciembre de 2021. iNaturalist, CC0. "
+                   "[Ver observación](https://www.inaturalist.org/observations/103735520)")
 SRC_CRTM05 = 8908  # proyectado, en metros: uniones espaciales y áreas
 SRC_WGS84 = 4326   # geográfico: el que usan los mapas web
 
@@ -310,7 +314,7 @@ texto_provincia = "todas las provincias" if provincia == "Todas" else f"provinci
 st.title(f"[Rana de Árbol de Ojos Rojos]({URL_ESPECIE})")
 st.markdown("##### *Agalychnis callidryas* · dónde y cuándo se observa en Costa Rica, según la ciencia ciudadana")
 
-col_intro, col_ficha = st.columns([3, 2], gap="large")
+col_intro, col_foto, col_ficha = st.columns([5, 4, 4], gap="medium")
 with col_intro:
     st.markdown(
         "Esta aplicación explora las observaciones de la rana de árbol de ojos rojos registradas por miles de "
@@ -321,6 +325,9 @@ with col_intro:
         "Las cifras, los datos curiosos, los gráficos, el mapa, las fotos y las tablas se actualizan con la selección."
     )
     st.markdown(f"**Selección:** {texto_provincia} · {anios[0]}-{anios[1]} · {epoca.lower()}")
+with col_foto:
+    st.image(FOTO_PORTADA, width="stretch")
+    st.caption(CREDITO_PORTADA)
 with col_ficha:
     with st.container(border=True):
         st.markdown(
