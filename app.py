@@ -88,6 +88,19 @@ def leyenda_html():
     return leyenda
 
 
+def estilo_calor():
+    """Regla de CSS que pone la capa de calor encima de los polígonos (todas las capas comparten el mismo panel)."""
+    elemento = MacroElement()
+    elemento._template = Template("""
+    {% macro script(this, kwargs) %}
+    var estiloCalor = document.createElement("style");
+    estiloCalor.innerHTML = ".leaflet-heatmap-layer {z-index: 450 !important;}";
+    document.head.appendChild(estiloCalor);
+    {% endmacro %}
+    """)
+    return elemento
+
+
 # ---------- Datos, en caché ----------
 @st.cache_data
 def cargar_cantones():
@@ -259,7 +272,16 @@ def crear_mapa(provincia, anios, epoca):
         attr="Esri, Maxar, Earthstar Geographics", name="Esri satelital", show=False,
     ).add_to(mapa)
 
-    # Capa 1: coropletas del número de observaciones por cantón
+    # Capa 1: puntos de calor (densidad de observaciones). Va primero para que encabece el control de capas;
+    # una regla de CSS la dibuja por encima de los polígonos de cantones y por debajo de los puntos
+    HeatMap(
+        list(zip(seleccion.geometry.y, seleccion.geometry.x)), name="Puntos de calor",
+        radius=14, blur=18, min_opacity=0.3,
+        gradient={0.2: "#fee08b", 0.5: "#fdae61", 0.8: "#f46d43", 1.0: "#a50026"},
+    ).add_to(mapa)
+    mapa.add_child(estilo_calor())
+
+    # Capa 2: coropletas del número de observaciones por cantón
     def estilo(feature):
         n = feature["properties"]["observaciones"]
         return {"fillColor": color_clase(n), "color": "white", "weight": 0.6, "fillOpacity": 0.75}
@@ -277,14 +299,14 @@ def crear_mapa(provincia, anios, epoca):
     ).add_to(mapa)
     mapa.add_child(leyenda_html())
 
-    # Capa 2: provincias (referencia)
+    # Capa 3: provincias (referencia)
     folium.GeoJson(
         provincias[["provincia", "geometry"]], name="Provincias",
         style_function=lambda f: {"fill": False, "color": "#444444", "weight": 1.5},
         tooltip=folium.GeoJsonTooltip(fields=["provincia"], aliases=["Provincia:"]),
     ).add_to(mapa)
 
-    # Capa 3: puntos, en un panel propio (z-index 620) para que queden encima de los polígonos (400)
+    # Capa 4: puntos, en un panel propio (z-index 620) para que queden encima de los polígonos (400)
     # y debajo de las etiquetas (650) y las ventanas emergentes (700) de Leaflet
     folium.map.CustomPane("puntos", z_index=620).add_to(mapa)
     marcador = folium.CircleMarker(radius=3, color="#7f0000", weight=0.5,
@@ -302,13 +324,6 @@ def crear_mapa(provincia, anios, epoca):
         # Ventana de tamaño fijo, para que Leaflet la mantenga dentro del mapa al abrirla
         popup=folium.GeoJsonPopup(fields=["ventana"], labels=False, max_width=250,
                                   keepInView=True, autoPanPadding=[20, 20]),
-    ).add_to(mapa)
-
-    # Capa 4: puntos de calor (densidad de observaciones), apagada al inicio; se enciende en el control de capas
-    HeatMap(
-        list(zip(seleccion.geometry.y, seleccion.geometry.x)), name="Puntos de calor", show=False,
-        radius=14, blur=18, min_opacity=0.3,
-        gradient={0.2: "#fee08b", 0.5: "#fdae61", 0.8: "#f46d43", 1.0: "#a50026"},
     ).add_to(mapa)
 
     Fullscreen(position="topleft", title="Pantalla completa", title_cancel="Salir de pantalla completa").add_to(mapa)
@@ -471,10 +486,12 @@ else:
                 grafico_carrera.layout.sliders[0].currentvalue.prefix = "Año: "
             if grafico_carrera.layout.updatemenus:  # velocidad de la animación (ms por año)
                 boton = grafico_carrera.layout.updatemenus[0].buttons[0]
-                boton.args[1]["frame"]["duration"] = 450
-                boton.args[1]["transition"]["duration"] = 300
+                # Lista explícita de cuadros: cada clic en Play reinicia la carrera desde el primer año
+                boton.args = [[cuadro.name for cuadro in grafico_carrera.frames],
+                              {"frame": {"duration": 450, "redraw": True}, "fromcurrent": False,
+                               "mode": "immediate", "transition": {"duration": 300}}]
             st.plotly_chart(grafico_carrera, width="stretch")
-            st.caption("Presione ▶ para ver cómo crecen las observaciones de cada cantón desde el primer registro.")
+            st.caption("Presione ▶ (cada vez reinicia desde el primer año) para ver cómo crecen las observaciones de cada cantón desde el primer registro.")
 
         with col_canton:
             top = tabla_cantones.head(15).sort_values("observaciones")
