@@ -1,4 +1,4 @@
-# La rana de ojos rojos (*Agalychnis callidryas*) en Costa Rica
+# La Rana de Árbol de Ojos Rojos (*Agalychnis callidryas*) en Costa Rica
 
 **Autor:** Jarod Salas Díaz
 
