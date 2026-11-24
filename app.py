@@ -81,35 +81,42 @@ def leyenda_html():
     contenido = ("<b>Capas del mapa</b>" + simbolos
                  + "<div style='margin-top:6px'><b>Observaciones por cantón</b><br><i>(número de registros)</i></div>"
                  + filas).replace("'", "&#39;")
-    plantilla = """
+    return Leyenda(contenido)
+
+
+class Leyenda(MacroElement):
+    """Control de Leaflet con la leyenda. La plantilla se define en la clase (y no en cada objeto) para que se
+    conserve en la copia que hace copy.deepcopy() antes de dibujar el mapa."""
+    _template = Template("""
     {% macro script(this, kwargs) %}
     var leyenda = L.control({position: "bottomright"});
     leyenda.onAdd = function () {
         var div = L.DomUtil.create("div");
         div.style.cssText = "background:white;padding:8px 10px;border-radius:4px;max-width:230px;"
             + "box-shadow:0 0 4px rgba(0,0,0,0.3);font:12px sans-serif;color:#333;line-height:18px;";
-        div.innerHTML = 'CONTENIDO';
+        div.innerHTML = '{{ this.contenido }}';
         return div;
     };
     leyenda.addTo({{ this._parent.get_name() }});
     {% endmacro %}
-    """.replace("CONTENIDO", contenido)
-    leyenda = MacroElement()
-    leyenda._template = Template(plantilla)
-    return leyenda
+    """)
+
+    def __init__(self, contenido):
+        super().__init__()
+        self._name = "Leyenda"
+        self.contenido = contenido
 
 
-def estilo_calor():
-    """Regla de CSS que pone la capa de calor encima de los polígonos (todas las capas comparten el mismo panel)."""
-    elemento = MacroElement()
-    elemento._template = Template("""
+class EstiloCalor(MacroElement):
+    """Regla de CSS que pone la capa de calor encima de los polígonos (todas las capas comparten el mismo panel).
+    La plantilla se define en la clase para que se conserve en la copia hecha con copy.deepcopy()."""
+    _template = Template("""
     {% macro script(this, kwargs) %}
     var estiloCalor = document.createElement("style");
     estiloCalor.innerHTML = ".leaflet-heatmap-layer {z-index: 450 !important;}";
     document.head.appendChild(estiloCalor);
     {% endmacro %}
     """)
-    return elemento
 
 
 # ---------- Datos, en caché ----------
@@ -294,7 +301,7 @@ def crear_mapa(provincia, anios, epoca):
         radius=14, blur=18, min_opacity=0.3,
         gradient={0.2: "#fee08b", 0.5: "#fdae61", 0.8: "#f46d43", 1.0: "#a50026"},
     ).add_to(mapa)
-    mapa.add_child(estilo_calor())
+    mapa.add_child(EstiloCalor())
 
     # Capa 2: coropletas del número de observaciones por cantón
     def estilo(feature):
