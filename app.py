@@ -438,6 +438,17 @@ else:
         )
         st.plotly_chart(grafico_anio, width="stretch")
 
+        with st.container():
+            top = tabla_cantones.head(15).sort_values("observaciones")
+            grafico_canton = px.bar(
+                top, x="observaciones", y="canton", orientation="h",
+                title=f"Los 15 cantones con más observaciones ({texto_provincia})",
+                labels={"observaciones": "Observaciones (registros)", "canton": "Cantón", "provincia": "Provincia"},
+                hover_data={"provincia": True},
+                color_discrete_sequence=[VERDE_OSCURO],
+            )
+            st.plotly_chart(grafico_canton, width="stretch")
+
         col_reloj, col_mes = st.columns(2)
         with col_reloj:
             por_hora = (seleccion.dropna(subset=["hora"]).groupby("hora").size()
@@ -504,18 +515,8 @@ else:
                               {"frame": {"duration": 450, "redraw": True}, "fromcurrent": False,
                                "mode": "immediate", "transition": {"duration": 300}}]
             st.plotly_chart(grafico_carrera, width="stretch")
-            st.caption("Presione ▶ (cada vez reinicia desde el primer año) para ver cómo crecen las observaciones de cada cantón desde el primer registro.")
-
-        with st.container():
-            top = tabla_cantones.head(15).sort_values("observaciones")
-            grafico_canton = px.bar(
-                top, x="observaciones", y="canton", orientation="h",
-                title=f"Los 15 cantones con más observaciones ({texto_provincia})",
-                labels={"observaciones": "Observaciones (registros)", "canton": "Cantón", "provincia": "Provincia"},
-                hover_data={"provincia": True},
-                color_discrete_sequence=[VERDE_OSCURO],
-            )
-            st.plotly_chart(grafico_canton, width="stretch")
+            st.caption("Presione ▶ (cada vez reinicia desde el primer año) para ver cómo crecen las observaciones "
+                       "de cada cantón desde el primer registro.")
 
     # ---------- Galería ----------
     with pestana_fotos:
