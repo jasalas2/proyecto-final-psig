@@ -20,7 +20,7 @@ de la página:
 - **Indicadores:** número de observaciones, cantones con observaciones, número de observadores y promedio anual.
 - **¿Sabía que…?:** cuatro datos curiosos calculados para la selección (proporción de observaciones nocturnas,
   año récord, concentración en pocos cantones y proporción de observadores ocasionales).
-- **Mapa web (folium y streamlit-folium):** coropletas del número de observaciones por cantón, límites de provincias
+- **Mapa web (folium y streamlit-folium):** coropletas del número de observaciones por cantón (con mapas base OpenStreetMap, oscuro y satelital), límites de provincias
   puntos de observación con su foto y una capa de puntos de calor, con control de capas, etiquetas emergentes y leyenda.
 - **Gráficos (plotly):** observaciones por año, por hora del día (gráfico polar), por mes (estacionalidad),
   carrera animada de los 10 cantones con más observaciones y los 15 cantones con más observaciones.

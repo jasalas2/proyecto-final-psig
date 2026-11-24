@@ -268,6 +268,10 @@ def crear_mapa(provincia, anios, epoca):
     mapa = folium.Map(location=centro, zoom_start=zoom, tiles=None, control_scale=True)
     folium.TileLayer("OpenStreetMap", name="OpenStreetMap").add_to(mapa)
     folium.TileLayer(
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        attr="Esri, HERE, Garmin", name="Esri oscuro", show=False,
+    ).add_to(mapa)
+    folium.TileLayer(
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         attr="Esri, Maxar, Earthstar Geographics", name="Esri satelital", show=False,
     ).add_to(mapa)
@@ -345,6 +349,9 @@ st.sidebar.caption("Todos los indicadores, datos curiosos, tablas, gráficos, fo
 seleccion = filtrar(provincia, anios, epoca)
 resumen = resumir_cantones(seleccion, provincia)
 texto_provincia = "todas las provincias" if provincia == "Todas" else f"provincia de {provincia}"
+
+# ---------- Estilo ----------
+st.html("<style>.st-key-carrera button[aria-label='Fullscreen'] {display: none;}</style>")
 
 # ---------- Encabezado ----------
 st.title(f"[Rana de Árbol de Ojos Rojos]({URL_ESPECIE})")
@@ -463,8 +470,9 @@ else:
             )
             st.plotly_chart(grafico_mes, width="stretch")
 
-        col_carrera, col_canton = st.columns(2)
-        with col_carrera:
+        # La carrera ocupa todo el ancho; el botón de pantalla completa de streamlit se oculta porque
+        # al ampliar el gráfico se pierde la animación
+        with st.container(key="carrera"):
             # Carrera animada: observaciones acumuladas de los 10 cantones con más registros, año por año
             cantones_top = tabla_cantones.head(10)["canton"].tolist()
             rango = range(int(seleccion["anio"].min()), anios[1] + 1)
@@ -481,9 +489,14 @@ else:
                 range_x=[0, carrera["acumulado"].max() * 1.15],
             )
             grafico_carrera.update_traces(textposition="outside", cliponaxis=False)
-            grafico_carrera.update_layout(showlegend=False, yaxis={"categoryorder": "total ascending"}, height=520)
+            grafico_carrera.update_layout(showlegend=False, yaxis={"categoryorder": "total ascending"}, height=560)
+            # Antes de presionar Play se muestra el resultado final (último año)
+            if grafico_carrera.frames:
+                final = grafico_carrera.frames[-1].data[0]
+                grafico_carrera.data[0].update(x=final.x, y=final.y, text=final.text)
             if grafico_carrera.layout.sliders:
                 grafico_carrera.layout.sliders[0].currentvalue.prefix = "Año: "
+                grafico_carrera.layout.sliders[0].active = len(grafico_carrera.frames) - 1
             if grafico_carrera.layout.updatemenus:  # velocidad de la animación (ms por año)
                 boton = grafico_carrera.layout.updatemenus[0].buttons[0]
                 # Lista explícita de cuadros: cada clic en Play reinicia la carrera desde el primer año
@@ -493,7 +506,7 @@ else:
             st.plotly_chart(grafico_carrera, width="stretch")
             st.caption("Presione ▶ (cada vez reinicia desde el primer año) para ver cómo crecen las observaciones de cada cantón desde el primer registro.")
 
-        with col_canton:
+        with st.container():
             top = tabla_cantones.head(15).sort_values("observaciones")
             grafico_canton = px.bar(
                 top, x="observaciones", y="canton", orientation="h",
