@@ -21,9 +21,9 @@ de la página:
 - **¿Sabía que…?:** cuatro datos curiosos calculados para la selección (proporción de observaciones nocturnas,
   año récord, concentración en pocos cantones y proporción de observadores ocasionales).
 - **Mapa web (folium y streamlit-folium):** coropletas del número de observaciones por cantón, límites de provincias
-  y puntos de observación con su foto, con control de capas, etiquetas emergentes y leyenda.
+  puntos de observación con su foto y una capa de puntos de calor, con control de capas, etiquetas emergentes y leyenda.
 - **Gráficos (plotly):** observaciones por año, por hora del día (gráfico polar), por mes (estacionalidad),
-  observaciones por provincia (o densidad por cantón, al elegir una provincia) y cantones con más observaciones.
+  carrera animada de los 10 cantones con más observaciones y los 15 cantones con más observaciones.
 - **Galería:** fotos recientes de la selección con licencia Creative Commons, con su crédito y enlace al registro.
 - **Tablas:** resumen por cantón y registros individuales con foto, descargables en CSV.
 

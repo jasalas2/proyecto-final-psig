@@ -11,7 +11,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from branca.element import MacroElement, Template
-from folium.plugins import Fullscreen
+from folium.plugins import Fullscreen, HeatMap
 from streamlit_folium import st_folium
 
 # ---------- Configuración de la página (primera llamada a streamlit) ----------
@@ -304,6 +304,13 @@ def crear_mapa(provincia, anios, epoca):
                                   keepInView=True, autoPanPadding=[20, 20]),
     ).add_to(mapa)
 
+    # Capa 4: puntos de calor (densidad de observaciones), apagada al inicio; se enciende en el control de capas
+    HeatMap(
+        list(zip(seleccion.geometry.y, seleccion.geometry.x)), name="Puntos de calor", show=False,
+        radius=14, blur=18, min_opacity=0.3,
+        gradient={0.2: "#fee08b", 0.5: "#fdae61", 0.8: "#f46d43", 1.0: "#a50026"},
+    ).add_to(mapa)
+
     Fullscreen(position="topleft", title="Pantalla completa", title_cancel="Salir de pantalla completa").add_to(mapa)
     folium.LayerControl(collapsed=True).add_to(mapa)
     return mapa
@@ -441,37 +448,33 @@ else:
             )
             st.plotly_chart(grafico_mes, width="stretch")
 
-        col_provincia, col_canton = st.columns(2)
-        with col_provincia:
-            if provincia == "Todas":
-                # Con todo el país: comparación entre provincias
-                por_provincia = (tabla_cantones.groupby("provincia", as_index=False)["observaciones"].sum()
-                                 .sort_values("observaciones"))
-                por_provincia["etiqueta"] = [f"{formato_numero(n)} ({n / len(seleccion):.0%})"
-                                             for n in por_provincia["observaciones"]]
-                grafico_provincia = px.bar(
-                    por_provincia, x="observaciones", y="provincia", orientation="h", text="etiqueta",
-                    title="Observaciones por provincia (todas las provincias)",
-                    labels={"observaciones": "Observaciones (registros)", "provincia": "Provincia"},
-                    color_discrete_sequence=[VERDE],
-                )
-                grafico_provincia.update_traces(textposition="outside", cliponaxis=False,
-                                                hovertemplate="%{y}: %{x} registros<extra></extra>")
-                grafico_provincia.update_layout(xaxis_range=[0, por_provincia["observaciones"].max() * 1.25])
-            else:
-                # Con una provincia: densidad por cantón, que compara cantones de tamaños muy distintos
-                densidad = tabla_cantones.sort_values("densidad").tail(15)
-                grafico_provincia = px.bar(
-                    densidad, x="densidad", y="canton", orientation="h", text="densidad",
-                    title=f"Densidad de observaciones por cantón ({texto_provincia})",
-                    labels={"densidad": "Densidad (obs/100 km²)", "canton": "Cantón",
-                            "observaciones": "Observaciones (registros)", "area_km2": "Área (km²)"},
-                    hover_data={"observaciones": True, "area_km2": ":.0f", "densidad": ":.1f"},
-                    color_discrete_sequence=[ROJO],
-                )
-                grafico_provincia.update_traces(texttemplate="%{text:.1f}", textposition="outside", cliponaxis=False)
-                grafico_provincia.update_layout(xaxis_range=[0, densidad["densidad"].max() * 1.2])
-            st.plotly_chart(grafico_provincia, width="stretch")
+        col_carrera, col_canton = st.columns(2)
+        with col_carrera:
+            # Carrera animada: observaciones acumuladas de los 10 cantones con más registros, año por año
+            cantones_top = tabla_cantones.head(10)["canton"].tolist()
+            rango = range(int(seleccion["anio"].min()), anios[1] + 1)
+            carrera = (seleccion[seleccion["canton"].isin(cantones_top)]
+                       .groupby(["anio", "canton"]).size().unstack(fill_value=0)
+                       .reindex(index=rango, columns=cantones_top, fill_value=0).cumsum()
+                       .stack().rename("acumulado").reset_index())
+            grafico_carrera = px.bar(
+                carrera, x="acumulado", y="canton", orientation="h", text="acumulado",
+                animation_frame="anio",
+                title="La carrera de los cantones: observaciones acumuladas año a año",
+                labels={"acumulado": "Observaciones acumuladas (registros)", "canton": "Cantón", "anio": "Año"},
+                color_discrete_sequence=[VERDE],
+                range_x=[0, carrera["acumulado"].max() * 1.15],
+            )
+            grafico_carrera.update_traces(textposition="outside", cliponaxis=False)
+            grafico_carrera.update_layout(showlegend=False, yaxis={"categoryorder": "total ascending"}, height=520)
+            if grafico_carrera.layout.sliders:
+                grafico_carrera.layout.sliders[0].currentvalue.prefix = "Año: "
+            if grafico_carrera.layout.updatemenus:  # velocidad de la animación (ms por año)
+                boton = grafico_carrera.layout.updatemenus[0].buttons[0]
+                boton.args[1]["frame"]["duration"] = 450
+                boton.args[1]["transition"]["duration"] = 300
+            st.plotly_chart(grafico_carrera, width="stretch")
+            st.caption("Presione ▶ para ver cómo crecen las observaciones de cada cantón desde el primer registro.")
 
         with col_canton:
             top = tabla_cantones.head(15).sort_values("observaciones")
