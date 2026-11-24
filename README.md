@@ -4,7 +4,7 @@
 
 **Curso:** GF-0657 Programación en SIG, II ciclo 2026. Proyecto final (aplicación web)
 
-**Aplicación publicada:** https://ENLACE-DE-SU-APLICACION.streamlit.app
+**Aplicación publicada:** https://proyecto-final-psig-jasalas.streamlit.app/
 
 ## Descripción
 
