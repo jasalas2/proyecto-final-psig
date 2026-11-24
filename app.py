@@ -394,7 +394,7 @@ else:
         mapa = copy.deepcopy(crear_mapa(provincia, anios, epoca))
         # center y zoom se pasan también a st_folium, porque el mapa se crea dentro de una pestaña
         centro, zoom = vista_inicial(provincia)
-        st_folium(mapa, height=780, use_container_width=True, center=centro, zoom=zoom, returned_objects=[])
+        st_folium(mapa, height=600, use_container_width=True, center=centro, zoom=zoom, returned_objects=[])
 
     # ---------- Gráficos ----------
     with pestana_graficos:
@@ -441,16 +441,22 @@ else:
             )
             st.plotly_chart(grafico_mes, width="stretch")
 
-        col_sol, col_canton = st.columns(2)
-        with col_sol:
-            grafico_sol = px.sunburst(
-                tabla_cantones, path=["provincia", "canton"], values="observaciones",
-                title="De la provincia al cantón: reparto de las observaciones (registros)",
-                color="provincia", color_discrete_sequence=px.colors.qualitative.Safe,
+        col_provincia, col_canton = st.columns(2)
+        with col_provincia:
+            por_provincia = (tabla_cantones.groupby("provincia", as_index=False)["observaciones"].sum()
+                             .sort_values("observaciones"))
+            por_provincia["etiqueta"] = [f"{formato_numero(n)} ({n / len(seleccion):.0%})"
+                                         for n in por_provincia["observaciones"]]
+            grafico_provincia = px.bar(
+                por_provincia, x="observaciones", y="provincia", orientation="h", text="etiqueta",
+                title=f"Observaciones por provincia ({texto_provincia})",
+                labels={"observaciones": "Observaciones (registros)", "provincia": "Provincia"},
+                color_discrete_sequence=[VERDE],
             )
-            grafico_sol.update_traces(hovertemplate="<b>%{label}</b><br>Observaciones: %{value} registros"
-                                                    "<br>%{percentRoot:.1%} del total<extra></extra>")
-            st.plotly_chart(grafico_sol, width="stretch")
+            grafico_provincia.update_traces(textposition="outside", cliponaxis=False,
+                                            hovertemplate="%{y}: %{x} registros<extra></extra>")
+            grafico_provincia.update_layout(xaxis_range=[0, por_provincia["observaciones"].max() * 1.25])
+            st.plotly_chart(grafico_provincia, width="stretch")
 
         with col_canton:
             top = tabla_cantones.head(15).sort_values("observaciones")
